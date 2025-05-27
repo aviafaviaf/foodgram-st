@@ -18,7 +18,7 @@
 
 ```bash
 git clone https://github.com/aviafaviaf/foodgram-project.git
-cd foodgram-project
+cd foodgram-st
 ```
 
 ### 2. Убедитесь, что установлены:
