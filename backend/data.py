@@ -1,4 +1,5 @@
 import json
+
 from recipes.models import Ingredient
 
 with open('..//data/ingredients.json', encoding='utf-8') as f:

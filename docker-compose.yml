@@ -21,6 +21,9 @@ services:
     depends_on:
       - db
     environment:
+      SECRET_KEY: django-insecure-l-q$b)sz0yg&l57tz)*w4cjbc376hh^1@%&qu+^p8k40z28d*u
+      DEBUG: 'True'
+      ALLOWED_HOSTS: localhost
       DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
       POSTGRES_DB: mydb
       POSTGRES_USER: myuser

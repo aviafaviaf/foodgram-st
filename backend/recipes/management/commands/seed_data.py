@@ -31,11 +31,15 @@ class Command(BaseCommand):
         with open(json_path, encoding='utf-8') as f:
             data = json.load(f)
 
-        for item in data:
-            Ingredient.objects.get_or_create(
+        ingredients = [
+            Ingredient(
                 name=item['name'],
                 measurement_unit=item['measurement_unit']
             )
+            for item in data
+        ]
+
+        Ingredient.objects.bulk_create(ingredients, ignore_conflicts=True)
         self.stdout.write(self.style.SUCCESS('Ингредиенты загружены.'))
 
         User = get_user_model()
@@ -70,20 +74,19 @@ class Command(BaseCommand):
             {'username': 'user3', 'email': 'user3@example.com',
              'password': 'pass1234'},
         ]
-        users = []
+        new_users = []
+
         for data in users_data:
-            user, created = User.objects.get_or_create(
+            user = User(
+                username=data['username'],
                 email=data['email'],
-                defaults={
-                    'username': data['username'],
-                    'first_name': data['username'].capitalize(),
-                    'last_name': 'Testov'
-                }
+                first_name=data['username'].capitalize(),
+                last_name='Testov'
             )
-            if created:
-                user.set_password(data['password'])
-                user.save()
-            users.append(user)
+            user.set_password(data['password'])
+            new_users.append(user)
+
+        User.objects.bulk_create(new_users)
         self.stdout.write(self.style.SUCCESS('Пользователи созданы.'))
 
         recipes_data = [
@@ -93,8 +96,9 @@ class Command(BaseCommand):
         ]
 
         ingredients = list(Ingredient.objects.all()[:3])
+        recipes = []
 
-        for i, user in enumerate(users):
+        for i, user in enumerate(new_users):
             r_data = recipes_data[i]
             recipe = Recipe.objects.create(
                 author=user,
@@ -104,13 +108,17 @@ class Command(BaseCommand):
             )
             recipe.image.save(f"{recipe.name}.png", self.generate_image(),
                               save=True)
+            recipes.append(recipe)
 
-            for ing in ingredients:
-                RecipeIngredient.objects.create(
+        bulk_links = []
+        for i, recipe in enumerate(recipes):
+            for ingredient in ingredients:
+                bulk_links.append(RecipeIngredient(
                     recipe=recipe,
-                    ingredient=ing,
-                    amount=100 + i * 10
-                )
+                    ingredient=ingredient,
+                    amount=1
+                ))
 
+        RecipeIngredient.objects.bulk_create(bulk_links)
         self.stdout.write(
             self.style.SUCCESS('Рецепты созданы и заполнены ингредиентами.'))

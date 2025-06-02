@@ -1,6 +1,7 @@
 import django_filters
-from .models import Recipe, Ingredient
 from django_filters import rest_framework as filters
+
+from ..recipes.models import Recipe, Ingredient
 
 
 def coerce_to_bool(value):
@@ -18,7 +19,6 @@ class RecipeFilter(filters.FilterSet):
         coerce=coerce_to_bool,
         method='filter_is_in_shopping_cart'
     )
-    author = filters.NumberFilter(field_name='author__id')
 
     class Meta:
         model = Recipe
