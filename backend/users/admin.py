@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .models import User, Subscription
-from recipes.models import ShoppingCart
 
 
 @admin.register(User)
@@ -26,11 +25,6 @@ class UserAdmin(BaseUserAdmin):
                        'password1', 'password2'),
         }),
     )
-
-
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')
 
 
 @admin.register(Subscription)

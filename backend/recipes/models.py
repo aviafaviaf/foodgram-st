@@ -82,9 +82,7 @@ class RecipeIngredient(models.Model):
         Ingredient, on_delete=models.CASCADE,
         verbose_name='Ингредиент'
     )
-    amount = models.DecimalField(
-        max_digits=AMOUNT_MAX_DIGITS,
-        decimal_places=AMOUNT_DECIMAL_PLACES,
+    amount = models.IntegerField(
         verbose_name='Количество'
     )
 

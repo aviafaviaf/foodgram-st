@@ -1,11 +1,12 @@
 from django.contrib import admin
 
-from .models import Recipe, Ingredient, RecipeIngredient, Favorite
+from .models import Recipe, Ingredient, RecipeIngredient, Favorite, \
+    ShoppingCart
 
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
-    extra = 1  # количество пустых форм
+    extra = 1
     min_num = 1
     autocomplete_fields = ['ingredient']
     verbose_name = "Ингредиент"
@@ -40,3 +41,8 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
     autocomplete_fields = ['user', 'recipe']
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
