@@ -2,11 +2,13 @@ from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
 from djoser.views import UserViewSet as DjoserUserViewSet
 from django.db.models import Sum, F
+from django.shortcuts import get_object_or_404
 
 from users.models import Subscription
 from recipes.models import Recipe, ShoppingCart, Favorite, Ingredient
@@ -34,12 +36,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    @action(detail=True, methods=['get'], url_path='get-link')
-    def get_link(self, request, pk=None):
-        instance = self.get_object()
-        url = f"{request.get_host()}/s/{instance.id}"
-        return Response(data={"short-link": url})
 
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart',
             permission_classes=[permissions.IsAuthenticated])
@@ -117,6 +113,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RecipeShortLinkView(APIView):
+    def get(self, request, id):
+        recipe = get_object_or_404(Recipe, id=id)
+        short_link = f"https://foodgram.example.org/s/{recipe.id:03x}"
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):

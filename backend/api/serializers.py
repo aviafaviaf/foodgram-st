@@ -7,6 +7,12 @@ from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 
 from recipes.models import (Recipe, Ingredient, RecipeIngredient)
+from .constants import (
+    MIN_INGREDIENT_AMOUNT, MIN_AMOUNT_INGREDIENT_ERROR,
+    INVALID_CURRENT_PASSWORD_ERROR, IMAGE_REQUIRED_ERROR,
+    COOKING_TIME_MIN_ERROR, EMPTY_INGREDIENTS_ERROR,
+    DUPLICATE_INGREDIENTS_ERROR, MIN_COOKING_TIME
+)
 
 User = get_user_model()
 
@@ -54,13 +60,14 @@ class SetPasswordSerializer(serializers.Serializer):
     def validate_current_password(self, value):
         user = self.context['request'].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Неверный текущий пароль.")
+            raise serializers.ValidationError(INVALID_CURRENT_PASSWORD_ERROR)
         return value
 
 
 class SubscriptionSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(source='recipes.count',
+                                             read_only=True)
 
     class Meta(UserSerializer.Meta):
         model = User
@@ -80,21 +87,17 @@ class SubscriptionSerializer(UserSerializer):
             context={'request': request}
         ).data
 
-    def get_recipes_count(self, obj):
-        return obj.recipes.count()
-
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit')
 
     class Meta:
         model = RecipeIngredient
         fields = ['id', 'name', 'measurement_unit', 'amount']
         read_only_fields = ['name', 'measurement_unit']
-
-    name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(
-        source='ingredient.measurement_unit')
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
@@ -132,52 +135,55 @@ class IngredientAmountSerializer(serializers.ModelSerializer):
         fields = ['id', 'amount']
 
     def validate_amount(self, value):
-        if value < 1:
-            raise serializers.ValidationError(
-                'Количество ингредиента должно быть не меньше 1.')
+        if value < MIN_INGREDIENT_AMOUNT:
+            raise serializers.ValidationError(MIN_AMOUNT_INGREDIENT_ERROR)
         return value
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
     ingredients = IngredientAmountSerializer(many=True)
     image = Base64ImageField()
+    author = UserSerializer(read_only=True)
 
     class Meta:
         model = Recipe
-        fields = ['name', 'image', 'text', 'cooking_time', 'ingredients']
-
-    def validate(self, data):
-        if self.instance and 'ingredients' not in data:
-            raise serializers.ValidationError({
-                'ingredients': 'Это поле обязательно для обновления.'
-            })
-        return data
+        fields = ['name', 'image', 'text', 'cooking_time', 'ingredients',
+                  'author']
 
     def validate_image(self, value):
         if not value:
-            raise serializers.ValidationError('Изображение обязательно.')
+            raise serializers.ValidationError(IMAGE_REQUIRED_ERROR)
         return value
 
     def validate_cooking_time(self, value):
-        if value < 1:
-            raise serializers.ValidationError(
-                'Время приготовления должно быть не меньше 1.'
-            )
+        if value < MIN_COOKING_TIME:
+            raise serializers.ValidationError(COOKING_TIME_MIN_ERROR)
         return value
 
-    def validate_ingredients(self, ingredients):
-        if not ingredients:
-            raise serializers.ValidationError(
-                'Добавьте хотя бы один ингредиент.')
+    def validate(self, attrs):
+        ingredients = attrs.get('ingredients')
+        request = self.context.get('request')
 
-        seen = set()
-        for ingredient in ingredients:
-            ing_id = ingredient['id'].id
-            if ing_id in seen:
-                raise serializers.ValidationError(
-                    'Ингредиенты не должны повторяться.')
-            seen.add(ing_id)
-        return ingredients
+        if request and request.method in ('POST', 'PUT', 'PATCH'):
+            if ingredients is None:
+                raise serializers.ValidationError({
+                    'ingredients': EMPTY_INGREDIENTS_ERROR
+                })
+            if not ingredients:
+                raise serializers.ValidationError({
+                    'ingredients': EMPTY_INGREDIENTS_ERROR
+                })
+
+            seen = set()
+            for ingredient in ingredients:
+                ing_id = ingredient['id'].id
+                if ing_id in seen:
+                    raise serializers.ValidationError({
+                        'ingredients': DUPLICATE_INGREDIENTS_ERROR
+                    })
+                seen.add(ing_id)
+
+        return attrs
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
@@ -201,6 +207,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 amount=item['amount']
             ) for item in ingredients_data
         ]
+
         RecipeIngredient.objects.bulk_create(ingredient_instances)
 
     def to_representation(self, instance):
