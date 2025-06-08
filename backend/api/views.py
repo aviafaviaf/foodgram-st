@@ -8,7 +8,8 @@ from django.http import HttpResponse
 from django.contrib.auth import get_user_model
 from djoser.views import UserViewSet as DjoserUserViewSet
 from django.db.models import Sum, F
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.conf import settings
 
 from users.models import Subscription
 from recipes.models import Recipe, ShoppingCart, Favorite, Ingredient
@@ -118,8 +119,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class RecipeShortLinkView(APIView):
     def get(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
-        short_link = f"https://foodgram.example.org/s/{recipe.id:03x}"
+        short_link = f"{settings.FRONTEND_URL}s/{recipe.id:03x}"
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+
+
+class RecipeShortRedirectView(APIView):
+    def get(self, request, short_id):
+        try:
+            recipe_id = int(short_id, 16)
+        except ValueError:
+            return Response({'error': 'Invalid short link'}, status=400)
+
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        return redirect(f"{settings.FRONTEND_URL}recipes/{recipe.id}")
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):

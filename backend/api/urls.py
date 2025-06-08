@@ -15,7 +15,7 @@ router.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('', include(router.urls)),
     path('recipes/<int:id>/get-link/', RecipeShortLinkView.as_view(),
          name='recipe-short-link'),
+    path('', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

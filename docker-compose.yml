@@ -27,6 +27,7 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
       POSTGRES_HOST: db
+      FRONTEND_URL: http://localhost/
     volumes:
       - static_volume:/app/staticfiles
       - ./backend/recipes/data:/app/recipes/data
